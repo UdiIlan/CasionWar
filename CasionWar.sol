@@ -4,7 +4,7 @@ contract CasinoWar {
     
     enum GameState { WAITING_FOR_PLAYER_1, WAITING_FOR_PLAYER_2, 
                      WAITING_FOR_HASHES, WAITING_FOR_SEEDS, 
-                     WINNER_CAN_WITHDRAW };
+                     WINNER_CAN_WITHDRAW }
     
     GameState curr_state;
     address player1;
@@ -19,7 +19,7 @@ contract CasinoWar {
     bool player2_set_hash;
 
     uint192 player1_seed;
-    uint192 player2_seed
+    uint192 player2_seed;
     
     bool player1_set_seed;
     bool player2_set_seed;
@@ -27,14 +27,14 @@ contract CasinoWar {
     uint player1_withdraw;
     uint player2_withdraw;
     
-    function CasinoWar() public
+    constructor() public
     {
         InitGame();
     }
     
     function InitGame() private
     {
-        curr_state = WAITING_FOR_PLAYER_1;
+        curr_state = GameState.WAITING_FOR_PLAYER_1;
         player1_set_hash = false;
         player2_set_hash = false;
         player1_set_seed = false;
@@ -45,25 +45,25 @@ contract CasinoWar {
     
     function StartGame() public payable
     {
-        require(curr_state == WAITING_FOR_PLAYER_1);
+        require(curr_state == GameState.WAITING_FOR_PLAYER_1);
         require(msg.value > 0);
         player1 = msg.sender;
         player1_payment = msg.value;
-        curr_state = WAITING_FOR_PLAYER_2;
+        curr_state = GameState.WAITING_FOR_PLAYER_2;
     }
     
     function JoinGame() public payable
     {
-        require(curr_state == WAITING_FOR_PLAYER_2);
+        require(curr_state == GameState.WAITING_FOR_PLAYER_2);
         require(msg.value == player1_payment);
-        require(player1 != msg.sender)
+        require(player1 != msg.sender);
         player2 = msg.sender;
-        curr_state = WAITING_FOR_HASHES;
+        curr_state = GameState.WAITING_FOR_HASHES;
     }
     
-    function SetHash(bytes32 player_hash)
+    function SetHash(bytes32 player_hash) public
     {
-        require(curr_state == WAITING_FOR_HASHES && (msg.sender == player1 && 
+        require(curr_state == GameState.WAITING_FOR_HASHES && (msg.sender == player1 && 
                 !player1_set_hash || msg.sender == player2 && 
                 !player2_set_hash));
         if (msg.sender == player1)
@@ -79,16 +79,16 @@ contract CasinoWar {
         
         if (player1_set_hash && player2_set_hash)
         {
-            curr_state = WAITING_FOR_SEEDS;
+            curr_state = GameState.WAITING_FOR_SEEDS;
         }
     }
     
-    function SetSeed(uint192 player_seed)
+    function SetSeed(uint192 player_seed) public
     {
-        require(curr_state == WAITING_FOR_SEEDS && (msg.sender == player1 && 
+        require(curr_state == GameState.WAITING_FOR_SEEDS && (msg.sender == player1 && 
                 !player1_set_seed || msg.sender == player2 && 
                 !player2_set_seed));
-        bytes32 test_hash = keccak256(player_seed);
+        bytes32 test_hash = keccak256(abi.encodePacked(player_seed));
         if (msg.sender == player1)
         {
             require(test_hash == player1_hash);
@@ -104,10 +104,10 @@ contract CasinoWar {
         
         if (player1_set_seed && player2_set_seed)
         {
-            uint random_number = uint256(keccak256(player1_seed + 
-                                                   player2_seed));
-            player1_card = random_number % 13;
-            player2_card = (random_number / 13) % 13; 
+            uint random_number = uint256(keccak256(abi.encodePacked(player1_seed + 
+                                                   player2_seed)));
+            uint player1_card = random_number % 13;
+            uint player2_card = (random_number / 13) % 13; 
             
             if (player1_card > player2_card)
             {
@@ -124,15 +124,15 @@ contract CasinoWar {
                 player1_withdraw = player1_payment;
                 player2_withdraw = player1_payment;
             }
-            curr_state = WINNER_CAN_WITHDRAW;
+            curr_state = GameState.WINNER_CAN_WITHDRAW;
         }
     }
     
-    function Withdraw()
+    function Withdraw() public
     {
-        require(curr_state == WINNER_CAN_WITHDRAW && ((msg.sender == player1 && 
+        require(curr_state == GameState.WINNER_CAN_WITHDRAW && ((msg.sender == player1 && 
                 player1_withdraw > 0) || (msg.sender == player2 && 
-                player2_withdraw > 0)))
+                player2_withdraw > 0)));
         uint to_withdraw = 0;
         if (msg.sender == player1)
         {
