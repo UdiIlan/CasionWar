@@ -2,10 +2,9 @@ pragma solidity ^0.4.24;
 
 contract CasinoWar {
     
-    enum GameState { WAITING_FOR_PLAYER_1, WAITING_FOR_PLAYER_2, WAITING_FOR_HASHES,
-                     WAITING_FOR_SEEDS, WINNER_CAN_WITHDRAW };
-    
-    enum Winner { PLAYER1, PLAYER2, DRAW };
+    enum GameState { WAITING_FOR_PLAYER_1, WAITING_FOR_PLAYER_2, 
+                     WAITING_FOR_HASHES, WAITING_FOR_SEEDS, 
+                     WINNER_CAN_WITHDRAW };
     
     GameState curr_state;
     address player1;
@@ -25,13 +24,23 @@ contract CasinoWar {
     bool player1_set_seed;
     bool player2_set_seed;
     
-    Winner winner;
+    uint player1_withdraw;
+    uint player2_withdraw;
     
     function CasinoWar() public
+    {
+        InitGame();
+    }
+    
+    function InitGame() private
     {
         curr_state = WAITING_FOR_PLAYER_1;
         player1_set_hash = false;
         player2_set_hash = false;
+        player1_set_seed = false;
+        player2_set_seed = false;
+        player1_withdraw = 0;
+        player2_withdraw = 0;
     }
     
     function StartGame() public payable
@@ -102,17 +111,43 @@ contract CasinoWar {
             
             if (player1_card > player2_card)
             {
-                winner = PLAYER1;
+                player1_withdraw = player1_payment * 2;
+                player2_withdraw = 0;
             }
             else if (player1_card < player2_card)
             {
-                winner = PLAYER2;
+                player1_withdraw = 0;
+                player2_withdraw = player1_payment * 2;
             }
             else
             {
-                winner = DRAW;
+                player1_withdraw = player1_payment;
+                player2_withdraw = player1_payment;
             }
             curr_state = WINNER_CAN_WITHDRAW;
+        }
+    }
+    
+    function Withdraw()
+    {
+        require(curr_state == WINNER_CAN_WITHDRAW && ((msg.sender == player1 && 
+                player1_withdraw > 0) || (msg.sender == player2 && 
+                player2_withdraw > 0)))
+        uint to_withdraw = 0;
+        if (msg.sender == player1)
+        {
+            to_withdraw = player1_withdraw;
+            player1_withdraw = 0;
+        }
+        else if (msg.sender == player2)
+        {
+            to_withdraw = player2_withdraw;
+            player2_withdraw = 0;
+        }
+        msg.sender.transfer(to_withdraw);
+        if (player1_withdraw == 0 && player2_withdraw == 0)
+        {
+            InitGame();
         }
     }
 }
